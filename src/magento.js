@@ -85,20 +85,7 @@ function Magento(config) {
 
   // initializing resources
   for (key in resources) {
-    this[key] = new (require(resources[key]))();
-
-    // 'method' listener, for making a request
-    this[key].on('method', function() {
-      var args = slice.call(arguments);
-      args[0] = this.prefix ? this.prefix + args[0] : args[0];
-      self.method.apply(self, args);
-    }.bind(this[key]));
-
-    // error listener
-    this[key].on('error', function(err, callback) {
-      err.resource = this.prefix;
-      callback(err);
-    });
+      this.addResource(key, resources[key]);
   }
 
   this.sessionId = null;
@@ -107,6 +94,26 @@ function Magento(config) {
   return this;
 }
 util.inherits(Magento, events.EventEmitter);
+
+Magento.prototype.addResource = function(resourceName, resourcePath){
+
+    var self = this;
+
+    this[resourceName] = new (require(resourcePath))();
+
+    // 'method' listener, for making a request
+    this[resourceName].on('method', function() {
+      var args = slice.call(arguments);
+      args[0] = this.prefix ? this.prefix + args[0] : args[0];
+      self.method.apply(self, args);
+    }.bind(this[resourceName]));
+
+    // error listener
+    this[resourceName].on('error', function(err, callback) {
+      err.resource = this.prefix;
+      callback(err);
+    });
+}
 
 Magento.prototype.method = function(method, args /* = optional arr */, callback) {
   var self = this;
@@ -165,6 +172,29 @@ Magento.prototype.methodApply = function(method, callArr, callback) {
 
     callback.apply(self, arguments);
   });
+
+  return this;
+};
+
+Magento.prototype.login = function(callback) {
+  var self = this;
+
+  this.client.methodCall('login', [ this.config.login, this.config.pass ], function(err, sessId) {
+    if (err) {
+      callback(new MagentoError('An error occurred at login', err));
+      return;
+    }
+
+    self.sessionId = sessId;
+    callback(null, sessId);
+  });
+
+  return this;
+};
+
+Magento.prototype.changeSession = function(sessId) {
+  this.prevSessId = this.sessionId;
+  this.sessionId = sessId;
 
   return this;
 };
