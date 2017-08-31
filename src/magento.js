@@ -73,7 +73,7 @@ function Magento(config) {
 
   //Change port config to 443 if isSecure
   if(config.isSecure){
-      //configDefaults.port = 443;
+      configDefaults.port = 443;
   }
   
   // validating config & setting up config object
